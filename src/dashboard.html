@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UTP Dashboard - Universal Trust Protocol</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2332;
+    --border: #2a3444;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #06b6d4;
+    --accent2: #8b5cf6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --blue: #3b82f6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  header .subtitle {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .stat-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .stat-chip .value {
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface2);
+  }
+
+  .panel-header h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .panel-body {
+    padding: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .panel-body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .panel-body::-webkit-scrollbar-track {
+    background: var(--surface);
+  }
+
+  .panel-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .entity-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    transition: background 0.15s;
+  }
+
+  .entity-row:hover {
+    background: var(--surface2);
+  }
+
+  .entity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .entity-icon.agent { background: rgba(6, 182, 212, 0.2); color: var(--accent); }
+  .entity-icon.human { background: rgba(139, 92, 246, 0.2); color: var(--accent2); }
+  .entity-icon.org { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+
+  .entity-info .name {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .entity-info .did {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+
+  .trust-score {
+    font-size: 0.85rem;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: center;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .trust-high { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+  .trust-mid { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+  .trust-low { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .status-active { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+  .status-suspended { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+  .status-revoked { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+  .status-created { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+
+  .event-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    font-size: 0.8rem;
+  }
+
+  .event-row:hover {
+    background: var(--surface2);
+  }
+
+  .event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+
+  .event-dot.grant { background: var(--green); }
+  .event-dot.verify { background: var(--blue); }
+  .event-dot.revoke { background: var(--red); }
+  .event-dot.anomaly { background: var(--orange); }
+  .event-dot.attestation { background: var(--accent); }
+  .event-dot.register { background: var(--accent2); }
+  .event-dot.status_change { background: var(--orange); }
+  .event-dot.delegate { background: var(--blue); }
+  .event-dot.revocation { background: var(--red); }
+
+  .event-text {
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .event-text .time {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-family: monospace;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .refresh-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.15s;
+  }
+
+  .refresh-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .merkle-root {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    margin: 0.5rem;
+    word-break: break-all;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Universal Trust Protocol</h1>
+    <div class="subtitle">Cryptographic trust infrastructure for AI agents</div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-chip">Entities: <span class="value" id="stat-entities">0</span></div>
+    <div class="stat-chip">Capabilities: <span class="value" id="stat-caps">0</span></div>
+    <div class="stat-chip">Revocations: <span class="value" id="stat-revocations">0</span></div>
+    <div class="stat-chip">Anomalies: <span class="value" id="stat-anomalies">0</span></div>
+    <div class="stat-chip"><span class="live-dot"></span> Live</div>
+  </div>
+</header>
+
+<div class="main-grid">
+  <!-- Entities Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Registered Entities</h2>
+      <button class="refresh-btn" onclick="refresh()">Refresh</button>
+    </div>
+    <div class="panel-body" id="entities-list">
+      <div class="empty-state">No entities registered yet. Run the demo to populate.</div>
+    </div>
+  </div>
+
+  <!-- Capability Grants Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Capability Grants</h2>
+    </div>
+    <div class="panel-body" id="capabilities-list">
+      <div class="empty-state">No capabilities granted yet.</div>
+    </div>
+  </div>
+
+  <!-- Event Feed Panel -->
+  <div class="panel full-width">
+    <div class="panel-header">
+      <h2>Event Feed</h2>
+      <span id="event-count" style="color: var(--text-dim); font-size: 0.8rem;"></span>
+    </div>
+    <div class="panel-body" id="events-list" style="max-height: 350px;">
+      <div class="empty-state">No events yet.</div>
+    </div>
+  </div>
+
+  <!-- Revocation Registry -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Revocation Registry</h2>
+    </div>
+    <div class="panel-body" id="revocations-list">
+      <div class="empty-state">No revocations.</div>
+    </div>
+    <div class="merkle-root" id="merkle-root">Merkle root: loading...</div>
+  </div>
+
+  <!-- Attestation / Anomalies Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Anomaly Alerts</h2>
+    </div>
+    <div class="panel-body" id="anomalies-list">
+      <div class="empty-state">No anomalies detected.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+
+function trustClass(score) {
+  if (score >= 0.7) return 'trust-high';
+  if (score >= 0.4) return 'trust-mid';
+  return 'trust-low';
+}
+
+function statusClass(status) {
+  return 'status-' + (status || 'created');
+}
+
+function shortDid(did) {
+  if (!did) return '';
+  const parts = did.split(':');
+  if (parts.length >= 3) {
+    return parts[0] + ':' + parts[1] + ':' + parts[2].substring(0, 8) + '...';
+  }
+  return did;
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() / 1000 - ts;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+function entityIcon(type) {
+  switch (type) {
+    case 'agent': return 'A';
+    case 'human': return 'H';
+    case 'org': return 'O';
+    default: return '?';
+  }
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+async function fetchJSON(path) {
+  try {
+    const res = await fetch(API + path);
+    return await res.json();
+  } catch (e) {
+    console.error('Fetch error:', path, e);
+    return null;
+  }
+}
+
+async function refresh() {
+  // Stats
+  const stats = await fetchJSON('/stats');
+  if (stats) {
+    document.getElementById('stat-entities').textContent = stats.entities?.total || 0;
+    document.getElementById('stat-caps').textContent = stats.capabilities_granted || 0;
+    document.getElementById('stat-revocations').textContent = stats.revocations || 0;
+    document.getElementById('stat-anomalies').textContent = stats.anomalies || 0;
+    document.getElementById('merkle-root').textContent = 'Merkle root: ' + (stats.merkle_root || 'N/A');
+  }
+
+  // Entities
+  const entities = await fetchJSON('/entities');
+  const entitiesEl = document.getElementById('entities-list');
+  if (entities && entities.length > 0) {
+    entitiesEl.innerHTML = entities.map(e => `
+      <div class="entity-row">
+        <div class="entity-icon ${escHtml(e.entity_type)}">${entityIcon(e.entity_type)}</div>
+        <div class="entity-info">
+          <div class="name">${escHtml(e.name)}</div>
+          <div class="did">${escHtml(shortDid(e.did))}</div>
+        </div>
+        <span class="trust-score ${trustClass(e.trust_score)}">${(e.trust_score * 100).toFixed(0)}%</span>
+        <span class="status-badge ${statusClass(e.status)}">${escHtml(e.status)}</span>
+      </div>
+    `).join('');
+  } else {
+    entitiesEl.innerHTML = '<div class="empty-state">No entities registered yet. Run the demo to populate.</div>';
+  }
+
+  // Events
+  const events = await fetchJSON('/events');
+  const eventsEl = document.getElementById('events-list');
+  if (events && events.length > 0) {
+    document.getElementById('event-count').textContent = events.length + ' events';
+    eventsEl.innerHTML = events.map(e => {
+      const type = e.type || 'unknown';
+      let text = '';
+      switch (type) {
+        case 'grant':
+          text = `<strong>Capability granted:</strong> ${escHtml(shortDid(e.issuer))} granted <em>${escHtml(e.action)}</em> on <em>${escHtml(e.resource)}</em> to ${escHtml(shortDid(e.subject))}`;
+          break;
+        case 'verify':
+          text = `<strong>Verified:</strong> token ${escHtml(e.token_id?.substring(0, 8))}... for <em>${escHtml(e.action)}</em> on <em>${escHtml(e.resource)}</em> - ${escHtml(e.result)}`;
+          break;
+        case 'revoke':
+        case 'revocation':
+          text = `<strong>Revoked:</strong> ${e.credential_id ? escHtml(shortDid(e.credential_id)) : escHtml(e.token_id?.substring(0, 8)) + '...'} by ${escHtml(shortDid(e.revoked_by))} (${escHtml(e.reason)})`;
+          break;
+        case 'attestation':
+          text = `<strong>Attestation:</strong> ${escHtml(shortDid(e.entity_did))} performed <em>${escHtml(e.action)}</em> on <em>${escHtml(e.resource)}</em>`;
+          if (e.anomaly) text += ` <span style="color:var(--red)">[ANOMALY: ${escHtml(e.reason)}]</span>`;
+          text += ` | Trust: ${(e.trust_score * 100).toFixed(0)}%`;
+          break;
+        case 'register':
+          text = `<strong>Registered:</strong> ${escHtml(e.name)} (${escHtml(e.entity_type)}) as ${escHtml(shortDid(e.did))}`;
+          break;
+        case 'status_change':
+          text = `<strong>Status change:</strong> ${escHtml(shortDid(e.did))} ${escHtml(e.from)} &rarr; ${escHtml(e.to)}`;
+          if (e.reason) text += ` (${escHtml(e.reason)})`;
+          break;
+        case 'delegate':
+          text = `<strong>Delegated:</strong> ${escHtml(shortDid(e.delegator))} delegated to ${escHtml(shortDid(e.delegate))}`;
+          break;
+        default:
+          text = `<strong>${type}:</strong> ${JSON.stringify(e).substring(0, 100)}`;
+      }
+      return `
+        <div class="event-row">
+          <div class="event-dot ${type}"></div>
+          <div class="event-text">
+            ${text}
+            <div class="time">${e.timestamp ? timeAgo(e.timestamp) : ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    eventsEl.innerHTML = '<div class="empty-state">No events yet.</div>';
+    document.getElementById('event-count').textContent = '';
+  }
+
+  // Revocations — extract from events
+  if (events) {
+    const revEvents = events.filter(e => e.type === 'revocation' || e.type === 'revoke');
+    const revEl = document.getElementById('revocations-list');
+    if (revEvents.length > 0) {
+      revEl.innerHTML = revEvents.map(e => `
+        <div class="event-row">
+          <div class="event-dot revoke"></div>
+          <div class="event-text">
+            <strong>${e.credential_id ? escHtml(shortDid(e.credential_id)) : escHtml(e.token_id || 'unknown')}</strong>
+            revoked by ${escHtml(shortDid(e.revoked_by || ''))} - ${escHtml(e.reason || 'N/A')}
+            <div class="time">${e.timestamp ? timeAgo(e.timestamp) : ''}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      revEl.innerHTML = '<div class="empty-state">No revocations.</div>';
+    }
+  }
+
+  // Anomalies — extract from events
+  if (events) {
+    const anomalyEvents = events.filter(e => e.type === 'attestation' && e.anomaly);
+    const anomEl = document.getElementById('anomalies-list');
+    if (anomalyEvents.length > 0) {
+      anomEl.innerHTML = anomalyEvents.map(e => `
+        <div class="event-row">
+          <div class="event-dot anomaly"></div>
+          <div class="event-text">
+            <strong>${escHtml(shortDid(e.entity_did))}</strong> - ${escHtml(e.reason)}
+            <br><em>${escHtml(e.action)}</em> on <em>${escHtml(e.resource)}</em> | Trust: ${(e.trust_score * 100).toFixed(0)}%
+            <div class="time">${e.timestamp ? timeAgo(e.timestamp) : ''}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      anomEl.innerHTML = '<div class="empty-state">No anomalies detected.</div>';
+    }
+  }
+
+  // Capabilities
+  const capEvents = events ? events.filter(e => e.type === 'grant') : [];
+  const capsEl = document.getElementById('capabilities-list');
+  if (capEvents.length > 0) {
+    capsEl.innerHTML = capEvents.map(e => `
+      <div class="event-row">
+        <div class="event-dot grant"></div>
+        <div class="event-text">
+          <strong>${escHtml(shortDid(e.issuer))}</strong> &rarr; <strong>${escHtml(shortDid(e.subject))}</strong>
+          <br><em>${escHtml(e.action)}</em> on <em>${escHtml(e.resource)}</em> (token: ${escHtml(e.token_id?.substring(0, 8))}...)
+          <div class="time">${e.timestamp ? timeAgo(e.timestamp) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    capsEl.innerHTML = '<div class="empty-state">No capabilities granted yet.</div>';
+  }
+}
+
+// Auto-refresh every 3 seconds
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
